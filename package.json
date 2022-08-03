@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/redeux/terraform-run-task-hello-world-nodejs.git"
+    "url": "git+https://github.com/gautambaghel/terraform-run-task-hello-world-nodejs.git"
   },
   "keywords": [
     "Terraform",
@@ -18,12 +18,12 @@
     "Task",
     "Server"
   ],
-  "author": "Phil Sautter",
+  "author": "Gautam",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/redeux/terraform-run-task-hello-world-nodejs/issues"
+    "url": "https://github.com/gautambaghel/terraform-run-task-hello-world-nodejs/issues"
   },
-  "homepage": "https://github.com/redeux/terraform-run-task-hello-world-nodejs#readme",
+  "homepage": "https://github.com/gautambaghel/terraform-run-task-hello-world-nodejs#readme",
   "dependencies": {
     "express": "^4.17.3",
     "node-fetch": "^3.2.3"

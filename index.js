@@ -3,6 +3,7 @@ import fetch from "node-fetch"
 import {
     createHmac
 } from "crypto"
+import fs from "fs"
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -20,21 +21,45 @@ app.post('/', async (req, res) => {
     // When a user adds a new Run Task to their Terraform Cloud organization, Terraform Cloud will attempt to 
     // validate the Run Task address and HMAC by sending a payload with dummy data. This condition will have to be accounted for.
     if (req.body.access_token !== "test-token") {
-        // Do some processing on the Run Task request
-        // Schema Documentation - https://www.terraform.io/cloud-docs/api-docs/run-tasks-integration#request-body
-        const {
-            plan_json_api_url,
-            access_token,
-            organization_name,
-            workspace_id,
-            run_id,
-            task_result_callback_url
-        } = req.body
-        const planJson = await getPlan(plan_json_api_url, access_token)
-        console.log(`Plan ouput for ${organization_name}/${workspace_id}/${run_id}\n${JSON.stringify(planJson, null, 2)}`)
 
-        // Send the results back to Terraform Cloud
-        await sendCallback(task_result_callback_url, access_token, 'passed', 'Hello World', 'http://example.com/runtask/QxZyl')
+        // Segment Run Tasks based on stage
+        if (req.body.stage === "pre_plan"){
+
+            // Download the config files locally
+            // API Documentation - https://www.terraform.io/cloud-docs/api-docs/configuration-versions#download-configuration-files
+            const {
+                configuration_version_download_url,
+                access_token,
+                organization_name,
+                workspace_name,
+                run_id,
+                task_result_callback_url
+            } = req.body
+            await downloadConfig(configuration_version_download_url, access_token)
+            console.log(`Config downloaded for Workspace: ${organization_name}/${workspace_name}, Run: ${run_id}\n downloaded at`+ process.cwd())
+
+            // Send the results back to Terraform Cloud
+            await sendCallback(task_result_callback_url, access_token, 'passed', 'Hello World', 'http://example.com/runtask/QxZyl')
+
+        } else if (req.body.stage === "post_plan"){
+
+            // Do some processing on the Run Task request
+            // Schema Documentation - https://www.terraform.io/cloud-docs/api-docs/run-tasks-integration#request-body
+            const {
+                plan_json_api_url,
+                access_token,
+                organization_name,
+                workspace_id,
+                run_id,
+                task_result_callback_url
+            } = req.body
+            const planJson = await getPlan(plan_json_api_url, access_token)
+            console.log(`Plan ouput for ${organization_name}/${workspace_id}/${run_id}\n${JSON.stringify(planJson, null, 2)}`)
+
+            // Send the results back to Terraform Cloud
+            await sendCallback(task_result_callback_url, access_token, 'passed', 'Hello World', 'http://example.com/runtask/QxZyl')
+
+        }
     }
 })
 
@@ -94,6 +119,29 @@ async function getPlan(url, accessToken) {
     return plan.json()
 
 }
+
+async function downloadConfig(configuration_version_download_url, accessToken) {
+    const options = {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/vnd.api+json',
+            'Authorization': 'Bearer ' + accessToken
+        },
+        maxRedirects: 20
+    }
+    const res = await fetch(configuration_version_download_url, options)
+    await new Promise((resolve, reject) => {
+        const fileStream = fs.createWriteStream('./config.tar.gz');
+        res.body.pipe(fileStream);
+        res.body.on("error", (err) => {
+          reject(err);
+        });
+        fileStream.on("finish", function() {
+          resolve();
+        });
+      });
+}
+
 
 app.listen(port, () => {
     console.log(`Terraform Run Task Hello World app listening on port ${port}`)
